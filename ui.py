@@ -90,21 +90,21 @@ class UserInterface:
         btn_cfg = {"width": 60, "height": 40, "corner_radius": 10, "font": ("Arial", 32),
                    "fg_color": "#0047AB", "border_color": "#00BFFF", "border_width": 2, "hover_color": "#1E90FF"}
 
-        ctk.CTkButton(buttons_frame, text="▲", command=lambda: self._register_click("MOVE_UP"), **btn_cfg).grid(row=0,
+        ctk.CTkButton(buttons_frame, text="▲", command=lambda: self._register_click("MoveUp"), **btn_cfg).grid(row=0,
                                                                                                                 column=1,
                                                                                                                 pady=15)
-        ctk.CTkButton(buttons_frame, text="▼", command=lambda: self._register_click("MOVE_DOWN"), **btn_cfg).grid(row=3,
+        ctk.CTkButton(buttons_frame, text="▼", command=lambda: self._register_click("MoveDown"), **btn_cfg).grid(row=3,
                                                                                                                   column=1,
                                                                                                                   pady=15)
-        ctk.CTkButton(buttons_frame, text="◀", command=lambda: self._register_click("MOVE_LEFT"), **btn_cfg).grid(row=2,
+        ctk.CTkButton(buttons_frame, text="◀", command=lambda: self._register_click("MoveLeft"), **btn_cfg).grid(row=2,
                                                                                                                   column=0,
                                                                                                                   padx=15)
-        ctk.CTkButton(buttons_frame, text="▶", command=lambda: self._register_click("MOVE_RIGHT"), **btn_cfg).grid(
+        ctk.CTkButton(buttons_frame, text="▶", command=lambda: self._register_click("MoveRight"), **btn_cfg).grid(
             row=2, column=2, padx=15)
 
         ctk.CTkButton(buttons_frame, text="🔥 FIRE 🔥", width=140, height=60, corner_radius=20,
                       fg_color="#CC0000", hover_color="#FF4500", text_color="#FFD700", font=("Rubik Storm", 18, "bold"),
-                      command=lambda: self._register_click("FIRE_LASER")).grid(row=2, column=1, padx=15, pady=15)
+                      command=lambda: self._register_click("FireLaser")).grid(row=2, column=1, padx=15, pady=15)
 
     def _setup_data_panel(self):
         """ בניית אזור הנתונים התחתון """
