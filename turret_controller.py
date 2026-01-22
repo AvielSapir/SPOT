@@ -5,7 +5,7 @@ import time
 class TurretController:
     def __init__(self):
         # --- הגדרות חיבור (שנה כאן אם צריך) ---
-        self.serial_port = 'COM5'  # לבדוק ב-Device Manager!
+        self.serial_port = 'COM3'  # לבדוק ב-Device Manager!
         self.baud_rate = 9600  # חייב להתאים לקוד בארדואינו
         # -------------------------------------
 
@@ -29,8 +29,8 @@ class TurretController:
             return  # אין חיבור, לא עושים כלום
 
         # 1. הגנה על הגבולות (0-180)
-        pan = max(0, min(180, pan))
-        tilt = max(0, min(180, tilt))
+        pan = max(40, min(80, pan))
+        tilt = max(40, min(80, tilt))
 
         # 2. שליחה בפורמט שהחבר שלך הגדיר
         command = f"{pan},{tilt}\n"
