@@ -1,60 +1,81 @@
-import tkinter as tk
-
-import vision
-from turret_controller import TurretController
-from ui import UserInterface
-from angle_calculator import AngleCalculator
 import time
+import argparse
+import numpy as np
+from vision import VisionEngine
+from angle_calculator import AngleCalculator
+from turret_controller import TurretController
+from overlay import CrosshairOverlay
 
+class SpotSystem:
+    def __init__(self, camera_source=0, weights_path: str = "yolov8n.pt", port: str = "COM3", simulated: bool = True):
+        self.vision = VisionEngine(source=camera_source, weights_path=weights_path)
+        self.calculator = AngleCalculator()
+        self.turret = TurretController(port=port, simulated=simulated)
+        self.lock_threshold = 12.0
+        self.lock_hold_frames = 0
+        self.required_lock_frames = 5
+        self.running = False
 
-turret = TurretController()
-angle_calculator = AngleCalculator()
-
-root = tk.Tk()
-ui = UserInterface(root)
-
-
-count = 0
-is_running = True
-mode = "SAFE MODE"
-
-turret.move_to(140, 60)
-while is_running:
-    try:
-        ui.refresh()
-    except tk.TclError:
-        is_running = False
-        break
-    #mode = ui.get_command()
-    #print(mode)
-
-    # vision
-    frame = vision.get_frame()
-    if frame is None:
-        break
-    print("+screen")
-    t_x, t_y, t_found = 0, 0, False
-    l_x, l_y, l_found = 0, 0, False
-
-    # move
-    if mode == "SAFE MODE":
-        l_x, l_y, t_x, t_y, l_found, t_found = vision.find_target(frame)
+    def step(self, frame: np.ndarray = None):
+        if frame is None:
+            frame = self.vision.get_frame()
+        if frame is None:
+            return None, False, (self.turret.current_pan, self.turret.current_tilt)
+        
+        lx, ly, tx, ty, l_found, t_found, t_name = self.vision.find_target(frame)
+        
+        lock_acquired = False
         if t_found and l_found:
-            pan, tilt = angle_calculator.calculate_angles(t_x, t_y, l_x, l_y)
-            turret.move_to(pan, tilt)
-            print("$$$")
+            pan, tilt = self.calculator.calculate_angles(tx, ty, lx, ly)
+            self.turret.move_to(pan, tilt)
+            
+            error_dist = ((tx - lx) ** 2 + ((ty + self.calculator.Y_OFFSET) - ly) ** 2) ** 0.5
+            if error_dist <= self.lock_threshold:
+                self.lock_hold_frames += 1
+                if self.lock_hold_frames >= self.required_lock_frames:
+                    lock_acquired = True
+                    self.turret.fire()
+            else:
+                self.lock_hold_frames = 0
+                self.turret.stop_fire()
         else:
-            count += 1
-            if count >= 20:
-                count = 0
-                turret.move_to(140, 60)
+            self.lock_hold_frames = 0
+            self.turret.stop_fire()
+            self.calculator.reset_control()
 
-    # ui
-    ui.update_frame(frame)
-    ui.update_target(t_found, t_x, t_y)
-    #time.sleep(0.1)
+        annotated = CrosshairOverlay.draw(frame, (lx, ly), (tx, ty), lock_acquired, t_name)
+        return annotated, lock_acquired, (self.turret.current_pan, self.turret.current_tilt)
 
+    def shutdown(self):
+        self.running = False
+        self.turret.close()
+        self.vision.release()
 
-print("done")
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", default=0)
+    parser.add_argument("--weights", default="yolov8n.pt")
+    parser.add_argument("--port", default="COM3")
+    parser.add_argument("--simulated", action="store_true", default=True)
+    args = parser.parse_args()
 
+    system = SpotSystem(
+        camera_source=args.source,
+        weights_path=args.weights,
+        port=args.port,
+        simulated=args.simulated
+    )
+    
+    try:
+        while True:
+            annotated, locked, angles = system.step()
+            if annotated is None:
+                break
+            time.sleep(0.033)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        system.shutdown()
 
+if __name__ == "__main__":
+    main()
